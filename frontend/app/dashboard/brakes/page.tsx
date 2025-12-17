@@ -14,7 +14,7 @@ import {
   Cell,
 } from "recharts"
 
-/* ✅ TYPES (MATCHING BACKEND RESPONSE) */
+/* ================= TYPES ================= */
 type TempPerformance = {
   temperature: string
   wear: number
@@ -30,7 +30,9 @@ type RiskSummary = {
   confidence: number
 }
 
+/* ================= CONSTANTS ================= */
 const COLORS = ["#22c55e", "#eab308", "#f97316", "#ef4444"]
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL
 
 export default function BrakesPage() {
   const router = useRouter()
@@ -50,32 +52,59 @@ export default function BrakesPage() {
       return
     }
 
+    if (!API_BASE) {
+      setError("API base URL not configured")
+      setLoading(false)
+      return
+    }
+
     const headers = { Authorization: `Bearer ${token}` }
 
     Promise.all([
-      fetch(`http://127.0.0.1:8000/${brand}/brakes/temp-performance`, { headers })
+      /* 🔹 TEMP vs WEAR */
+      fetch(`${API_BASE}/${brand}/brakes/temp-performance`, { headers })
         .then((r) => r.json())
         .then((data) => {
-          console.log("Brakes temp-perf:", data)
-          setTempPerf(Array.isArray(data) ? data : [])
+          if (!Array.isArray(data)) return []
+          return data.map(
+            (i: any): TempPerformance => ({
+              temperature: String(i.temperature ?? i.temp_band ?? ""),
+              wear: Number(i.wear ?? i.avg_brake_wear_percent ?? 0),
+            })
+          )
         }),
 
-      fetch(`http://127.0.0.1:8000/${brand}/brakes/wear-distribution`, { headers })
+      /* 🔹 WEAR DISTRIBUTION */
+      fetch(`${API_BASE}/${brand}/brakes/wear-distribution`, { headers })
         .then((r) => r.json())
         .then((data) => {
-          console.log("Brakes distribution:", data)
-          setDistribution(Array.isArray(data) ? data : [])
+          if (!Array.isArray(data)) return []
+          return data.map(
+            (i: any): WearDistribution => ({
+              label: String(Object.values(i)[0] ?? "Unknown"),
+              value: Number(Object.values(i)[1] ?? 0),
+            })
+          )
         }),
 
-      fetch(`http://127.0.0.1:8000/${brand}/brakes/risk`, { headers })
+      /* 🔹 RISK */
+      fetch(`${API_BASE}/${brand}/brakes/risk`, { headers })
         .then((r) => r.json())
         .then((data) => {
-          console.log("Brakes risk:", data)
-          if (data && typeof data === 'object') {
-            setRisk(data as RiskSummary)
+          if (data && typeof data === "object") {
+            return {
+              risk: String(data.risk ?? "Unknown"),
+              confidence: Number(data.confidence ?? 0),
+            } as RiskSummary
           }
+          return null
         }),
     ])
+      .then(([t, d, r]) => {
+        setTempPerf(t || [])
+        setDistribution(d || [])
+        setRisk(r)
+      })
       .catch((err) => {
         console.error("Failed to load brake data:", err)
         setError("Failed to load brake data")
@@ -94,27 +123,20 @@ export default function BrakesPage() {
         padding: "40px 60px",
       }}
     >
-      
-
       <h1 style={{ fontSize: 34, marginBottom: 40 }}>Brake Insights</h1>
 
       {error && <p style={{ color: "red" }}>{error}</p>}
 
-      {/* ✅ TOP SECTION */}
+      {/* TOP SECTION */}
       <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 40 }}>
-        {/* ✅ TEMP vs WEAR */}
+        {/* TEMP vs WEAR */}
         <div style={cardStyle}>
           <h2>Temperature vs Brake Wear</h2>
           <ResponsiveContainer width="100%" height={280}>
             <LineChart data={tempPerf}>
               <XAxis dataKey="temperature" stroke="#cbd5f5" />
               <YAxis stroke="#cbd5f5" />
-              <Tooltip
-                contentStyle={tooltipStyle}
-                labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
-                formatter={(v) => [`${v}`, "Wear"]}
-                cursor={{ stroke: "#9ca3af", strokeWidth: 1 }}
-              />
+              <Tooltip contentStyle={tooltipStyle} />
               <Line
                 type="monotone"
                 dataKey="wear"
@@ -126,7 +148,7 @@ export default function BrakesPage() {
           </ResponsiveContainer>
         </div>
 
-        {/* ✅ WEAR DISTRIBUTION */}
+        {/* WEAR DISTRIBUTION */}
         <div style={cardStyle}>
           <h2>Brake Wear Distribution</h2>
           <ResponsiveContainer width="100%" height={280}>
@@ -140,97 +162,77 @@ export default function BrakesPage() {
                 outerRadius={95}
                 label
               >
-                {(distribution || []).map((_, i) => (
+                {distribution.map((_, i) => (
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
               </Pie>
-
-              {/* ✅ FIXED TOOLTIP */}
-              <Tooltip
-                contentStyle={{
-                  ...tooltipStyle,
-                  color: "#735c5cff",
-                  fontSize: 14,
-                }}
-                formatter={(value, name) => [
-                  `${value} vehicles`,
-                  name,
-                ]}
-                labelStyle={{ color: "#4e6ba7ff", fontWeight: 600 }}
-              />
+              <Tooltip contentStyle={tooltipStyle} />
             </PieChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      {/* ✅ RISK SUMMARY WITH PROGRESS BAR */}
-      <div style={{ ...cardStyle, marginTop: 50 }}>
-        <h2 style={{ textAlign: "center" }}>Brake Risk Summary</h2>
+      {/* RISK SUMMARY */}
+      {risk && (
+        <div style={{ ...cardStyle, marginTop: 50 }}>
+          <h2 style={{ textAlign: "center" }}>Brake Risk Summary</h2>
 
-        {risk && (
-          <>
+          <div
+            style={{
+              marginTop: 22,
+              fontSize: 34,
+              fontWeight: 700,
+              textAlign: "center",
+              color: risk.risk === "High Risk" ? "#ef4444" : "#22c55e",
+            }}
+          >
+            {risk.risk}
+          </div>
+
+          <div style={{ marginTop: 30 }}>
             <div
               style={{
-                marginTop: 22,
-                fontSize: 34,
-                fontWeight: 700,
-                textAlign: "center",
-                color: risk.risk === "High Risk" ? "#ef4444" : "#22c55e",
+                display: "flex",
+                justifyContent: "space-between",
+                fontSize: 14,
+                opacity: 0.8,
+                marginBottom: 8,
               }}
             >
-              {risk.risk}
+              <span>Confidence</span>
+              <span>{risk.confidence}%</span>
             </div>
 
-            <div style={{ marginTop: 30 }}>
+            <div
+              style={{
+                height: 12,
+                width: "100%",
+                background: "#020617",
+                borderRadius: 10,
+                overflow: "hidden",
+                border: "1px solid #1e293b",
+              }}
+            >
               <div
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  fontSize: 14,
-                  opacity: 0.8,
-                  marginBottom: 8,
+                  height: "100%",
+                  width: `${risk.confidence}%`,
+                  background:
+                    risk.risk === "High Risk"
+                      ? "linear-gradient(90deg, #ef4444, #b91c1c)"
+                      : "linear-gradient(90deg, #22c55e, #16a34a)",
+                  transition: "width 0.6s ease",
                 }}
-              >
-                <span>Confidence</span>
-                <span>{risk.confidence}%</span>
-              </div>
-
-              {/* ✅ PROGRESS BAR */}
-              <div
-                style={{
-                  height: 12,
-                  width: "100%",
-                  background: "#020617",
-                  borderRadius: 10,
-                  overflow: "hidden",
-                  border: "1px solid #1e293b",
-                }}
-              >
-                <div
-                  style={{
-                    height: "100%",
-                    width: `${risk.confidence}%`,
-                    background:
-                      risk.risk === "High Risk"
-                        ? "linear-gradient(90deg, #ef4444, #b91c1c)"
-                        : "linear-gradient(90deg, #22c55e, #16a34a)",
-                    boxShadow:
-                      risk.risk === "High Risk"
-                        ? "0 0 12px rgba(239,68,68,0.7)"
-                        : "0 0 12px rgba(34,197,94,0.7)",
-                    transition: "width 0.6s ease",
-                  }}
-                />
-              </div>
+              />
             </div>
-          </>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-/* ✅ STYLES */
+/* ================= STYLES ================= */
 const cardStyle = {
   background: "rgba(2,6,23,0.85)",
   borderRadius: 18,
@@ -242,4 +244,5 @@ const tooltipStyle = {
   background: "#677098ff",
   border: "1px solid #38bdf8",
   boxShadow: "0 0 20px rgba(56,189,248,0.6)",
+  color: "#fff",
 }

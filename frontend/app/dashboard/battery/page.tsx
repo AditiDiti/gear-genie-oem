@@ -14,17 +14,34 @@ import {
   Cell,
 } from "recharts"
 
-/* ✅ COLORS */
+/* ================= COLORS ================= */
 const COLORS = ["#22c55e", "#eab308", "#f97316", "#ef4444"]
+
+/* ================= TYPES ================= */
+type TempPerf = {
+  temperature: string
+  health: number
+}
+
+type DistributionItem = {
+  label: string
+  value: number
+}
+
+type RiskSummary = {
+  risk: string
+  confidence: number
+}
+
+/* ================= API BASE ================= */
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL
 
 export default function BatteryPage() {
   const router = useRouter()
 
-  const [tempPerf, setTempPerf] = useState<any[]>([])
-  const [distribution, setDistribution] = useState<any[]>([])
-  const [risk, setRisk] = useState<{ risk: string; confidence: number } | null>(
-    null
-  )
+  const [tempPerf, setTempPerf] = useState<TempPerf[]>([])
+  const [distribution, setDistribution] = useState<DistributionItem[]>([])
+  const [risk, setRisk] = useState<RiskSummary | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -36,47 +53,57 @@ export default function BatteryPage() {
       return
     }
 
+    if (!API_BASE) {
+      console.error("API base URL not configured")
+      return
+    }
+
     const headers = { Authorization: `Bearer ${token}` }
 
     Promise.all([
-      fetch(`http://127.0.0.1:8000/${brand}/battery/temp-performance`, { headers })
+      /* 🔹 TEMP vs BATTERY HEALTH */
+      fetch(`${API_BASE}/${brand}/battery/temp-performance`, { headers })
         .then((r) => r.json())
         .then((data) => {
-          console.log("Battery temp-perf:", data)
-          if (Array.isArray(data)) {
-            return data.map((i: any) => ({
-              temperature: i.temp_band || i.temperature || "",
-              health: Number(i.avg_battery_health_percent || i.health || 0),
-            }))
-          }
-          return []
+          if (!Array.isArray(data)) return []
+          return data.map(
+            (i: any): TempPerf => ({
+              temperature: String(i.temp_band ?? i.temperature ?? ""),
+              health: Number(
+                i.avg_battery_health_percent ?? i.health ?? 0
+              ),
+            })
+          )
         }),
 
-      fetch(`http://127.0.0.1:8000/${brand}/battery/distribution`, { headers })
+      /* 🔹 BATTERY DISTRIBUTION */
+      fetch(`${API_BASE}/${brand}/battery/distribution`, { headers })
         .then((r) => r.json())
         .then((data) => {
-          console.log("Battery distribution:", data)
-          if (Array.isArray(data)) {
-            return data.map((i: any) => ({
-              label: Object.values(i)[0] || "Unknown",
-              value: parseInt(Object.values(i)[1]?.toString() || "0"),
-            }))
-          }
-          return []
+          if (!Array.isArray(data)) return []
+          return data.map(
+            (i: any): DistributionItem => ({
+              label: String(Object.values(i)[0] ?? "Unknown"),
+              value: Number(Object.values(i)[1] ?? 0),
+            })
+          )
         }),
 
-      fetch(`http://127.0.0.1:8000/${brand}/battery/risk`, { headers })
+      /* 🔹 BATTERY RISK */
+      fetch(`${API_BASE}/${brand}/battery/risk`, { headers })
         .then((r) => r.json())
         .then((data) => {
-          console.log("Battery risk:", data)
           if (Array.isArray(data) && data.length > 0) {
             const row = data[0]
             return {
-              risk: parseInt(row.battery_issue_imminent) === 1 ? "High Risk" : "Low Risk",
-              confidence: Math.round(parseFloat(row.fraction) * 100),
-            }
+              risk:
+                Number(row.battery_issue_imminent) === 1
+                  ? "High Risk"
+                  : "Low Risk",
+              confidence: Math.round(Number(row.fraction ?? 0) * 100),
+            } as RiskSummary
           }
-          return { risk: "Unknown", confidence: 0 }
+          return { risk: "Unknown", confidence: 0 } as RiskSummary
         }),
     ])
       .then(([t, d, r]) => {
@@ -86,7 +113,6 @@ export default function BatteryPage() {
       })
       .catch((err) => {
         console.error("Failed to load battery data:", err)
-        setLoading(false)
       })
       .finally(() => setLoading(false))
   }, [router])
@@ -104,9 +130,9 @@ export default function BatteryPage() {
     >
       <h1 style={{ fontSize: 34, marginBottom: 40 }}>Battery Insights</h1>
 
-      {/* ✅ TOP ROW */}
+      {/* TOP ROW */}
       <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 40 }}>
-        {/* ✅ TEMP vs BATTERY HEALTH */}
+        {/* TEMP vs BATTERY HEALTH */}
         <div style={cardStyle}>
           <h2>Temperature vs Battery Health</h2>
           <ResponsiveContainer width="100%" height={280}>
@@ -116,7 +142,7 @@ export default function BatteryPage() {
               <Tooltip contentStyle={tooltipStyle} />
               <Line
                 dataKey="health"
-                stroke="#38bdf8"          // ✅ SAME BLUE AS ENGINE
+                stroke="#38bdf8"
                 strokeWidth={3}
                 dot={{ r: 6 }}
               />
@@ -124,7 +150,7 @@ export default function BatteryPage() {
           </ResponsiveContainer>
         </div>
 
-        {/* ✅ BATTERY HEALTH DISTRIBUTION */}
+        {/* BATTERY DISTRIBUTION */}
         <div style={cardStyle}>
           <h2>Battery Health Distribution</h2>
           <ResponsiveContainer width="100%" height={280}>
@@ -138,7 +164,7 @@ export default function BatteryPage() {
                 outerRadius={95}
                 label
               >
-                {(distribution || []).map((_: any, i: number) => (
+                {distribution.map((_, i) => (
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
               </Pie>
@@ -148,7 +174,7 @@ export default function BatteryPage() {
         </div>
       </div>
 
-      {/* ✅ BATTERY RISK SUMMARY (ENGINE STYLE ✅) */}
+      {/* BATTERY RISK SUMMARY */}
       {risk && (
         <div style={{ ...cardStyle, marginTop: 50, textAlign: "center" }}>
           <h2>Battery Risk Summary</h2>
@@ -164,7 +190,6 @@ export default function BatteryPage() {
             {risk.risk}
           </div>
 
-          {/* ✅ CONFIDENCE BAR */}
           <div
             style={{
               marginTop: 24,
@@ -196,7 +221,7 @@ export default function BatteryPage() {
   )
 }
 
-/* ✅ STYLES */
+/* ================= STYLES ================= */
 const cardStyle = {
   background: "rgba(2,6,23,0.85)",
   borderRadius: 18,

@@ -3,10 +3,13 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 
+/* ================= API BASE ================= */
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL
+
 export default function LoginPage() {
   const router = useRouter()
 
-  /* ✅ SPLASH STATE */
+  /* SPLASH STATE */
   const [showSplash, setShowSplash] = useState(true)
 
   const [email, setEmail] = useState("")
@@ -15,14 +18,9 @@ export default function LoginPage() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 
-  /* ✅ ALWAYS SHOW SPLASH ON PAGE LOAD */
+  /* ALWAYS SHOW SPLASH */
   useEffect(() => {
-    setShowSplash(true)
-
-    const timer = setTimeout(() => {
-      setShowSplash(false)
-    }, 2000) // ✅ 2 sec exactly
-
+    const timer = setTimeout(() => setShowSplash(false), 2000)
     return () => clearTimeout(timer)
   }, [])
 
@@ -34,10 +32,15 @@ export default function LoginPage() {
       return
     }
 
+    if (!API_BASE) {
+      setError("Backend URL not configured")
+      return
+    }
+
     setLoading(true)
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/auth/login", {
+      const res = await fetch(`${API_BASE}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, brand }),
@@ -54,39 +57,38 @@ export default function LoginPage() {
       localStorage.setItem("brand", data.brand)
 
       router.push("/dashboard")
-    } catch {
+    } catch (err) {
+      console.error("Login failed:", err)
       setError("Backend not reachable")
     } finally {
       setLoading(false)
     }
   }
 
-  /* ✅ SPLASH SCREEN */
+  /* SPLASH SCREEN */
   if (showSplash) {
     return (
       <div
         style={{
           height: "100vh",
           width: "100vw",
-          background: "#000", // ✅ pure black as you asked
+          background: "#000",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
         }}
       >
         <img
-  src="/logo.png"
-  alt="GearGenie"
-  style={{
-    width: "35vw",          // ✅ 35% of viewport width
-    maxWidth: 520,          // ✅ safety cap (big screens)
-    minWidth: 260,          // ✅ safety cap (small screens)
-    animation: "logoIntro 2s ease-in-out forwards",
-  }}
-/>
+          src="/logo.png"
+          alt="GearGenie"
+          style={{
+            width: "35vw",
+            maxWidth: 520,
+            minWidth: 260,
+            animation: "logoIntro 2s ease-in-out forwards",
+          }}
+        />
 
-
-        {/* ✅ ANIMATION */}
         <style>{`
           @keyframes logoIntro {
             0% {
@@ -107,7 +109,7 @@ export default function LoginPage() {
     )
   }
 
-  /* ✅ LOGIN UI */
+  /* LOGIN UI */
   return (
     <div
       style={{
@@ -117,24 +119,9 @@ export default function LoginPage() {
         justifyContent: "center",
         background: "radial-gradient(circle at top, #0f172a 0%, #000 70%)",
         color: "#fff",
-        animation: "fadeIn 0.6s ease",
         fontFamily: "Inter, sans-serif",
       }}
     >
-      <style>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(6px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
-
-      {/* ✅ LOGIN CARD */}
       <div
         style={{
           width: 420,
@@ -227,7 +214,7 @@ export default function LoginPage() {
   )
 }
 
-/* ✅ STYLES */
+/* ================= STYLES ================= */
 const inputStyle = {
   width: "100%",
   padding: "12px",

@@ -1,11 +1,20 @@
 import { NextResponse } from "next/server"
 
-export async function POST(req: Request) {
-  const body = await req.json()
-  const { question, brand, token } = body
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL
 
+export async function POST(req: Request) {
   try {
-    const res = await fetch("http://127.0.0.1:8000/mcp/query", {
+    const body = await req.json()
+    const { question, brand, token } = body
+
+    if (!API_BASE) {
+      return NextResponse.json(
+        { answer: "API base URL is not configured." },
+        { status: 500 }
+      )
+    }
+
+    const res = await fetch(`${API_BASE}/mcp/query`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -14,9 +23,14 @@ export async function POST(req: Request) {
       body: JSON.stringify({ question, brand }),
     })
 
+    if (!res.ok) {
+      throw new Error(`Backend error: ${res.status}`)
+    }
+
     const data = await res.json()
     return NextResponse.json(data)
   } catch (err) {
+    console.error("Chat API error:", err)
     return NextResponse.json(
       { answer: "Assistant service is currently unavailable." },
       { status: 500 }
