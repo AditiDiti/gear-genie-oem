@@ -97,7 +97,15 @@ export default function EnginePage() {
     ])
       .then(([t, d, r]) => {
         setTempPerf(t || [])
-        setDistribution(d || [])
+        setDistribution(
+           (d || []).map((item: any) => ({
+            label: typeof item.label === "string"
+            ? item.label
+            : JSON.stringify(item.label ?? "Unknown"),
+            value: item.value,
+            }))
+        )
+
         setRisk(r)
       })
       .catch((err) => {
