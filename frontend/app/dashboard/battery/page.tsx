@@ -16,6 +16,7 @@ import {
 
 /* ================= COLORS ================= */
 const COLORS = ["#22c55e", "#eab308", "#f97316", "#ef4444"]
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000"
 
 /* ================= TYPES ================= */
 type TempPerf = {
@@ -32,9 +33,6 @@ type RiskSummary = {
   risk: string
   confidence: number
 }
-
-/* ================= API BASE ================= */
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL
 
 export default function BatteryPage() {
   const router = useRouter()

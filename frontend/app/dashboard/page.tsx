@@ -37,7 +37,7 @@ const toCamelCase = (str: string) =>
     .join(" ")
 
 /* ================= API BASE ================= */
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000"
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -46,6 +46,7 @@ export default function DashboardPage() {
   const [ranking, setRanking] = useState<RankingItem[]>([])
   const [loading, setLoading] = useState(true)
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
+  const [userBrand, setUserBrand] = useState("")
 
   /* ================= CHAT STATE ================= */
   const [assistantOpen, setAssistantOpen] = useState(false)
@@ -68,6 +69,8 @@ export default function DashboardPage() {
       router.push("/login")
       return
     }
+
+    setUserBrand(brand)
 
     if (!API_BASE) {
       console.error("API base URL not configured")
@@ -242,6 +245,73 @@ export default function DashboardPage() {
             </Bar>
           </BarChart>
         </ResponsiveContainer>
+      </section>
+
+      {/* BRAND RANKINGS */}
+      <section style={{ padding: "40px 90px", maxWidth: "1200px", margin: "0 auto" }}>
+        <h2 style={{ fontSize: "28px", fontWeight: "bold", marginBottom: "30px" }}>Brand Rankings</h2>
+        <div style={{ display: "grid", gap: "15px" }}>
+          {ranking.slice(0, 10).map((brand, index) => (
+            <div
+              key={index}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "20px",
+                padding: "20px",
+                background: "#1a1f2e",
+                borderRadius: "8px",
+                border: userBrand.toLowerCase() === brand.brand.toLowerCase() ? "1px solid #3b82f6" : "1px solid #2d3748",
+                cursor: "pointer",
+                transition: "all 0.3s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = "#3b82f6"
+                e.currentTarget.style.background = "#1f2937"
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = userBrand.toLowerCase() === brand.brand.toLowerCase() ? "#3b82f6" : "#2d3748"
+                e.currentTarget.style.background = "#1a1f2e"
+              }}
+              onClick={() => router.push(`/${brand.brand.toLowerCase()}/summary`)}
+            >
+              {/* Rank Badge */}
+              <div
+                style={{
+                  width: "50px",
+                  height: "50px",
+                  background: index === 0 ? "#fbbf24" : index === 1 ? "#c0c0c0" : index === 2 ? "#cd7f32" : "#3b82f6",
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: "bold",
+                  fontSize: "20px",
+                }}
+              >
+                {index + 1}
+              </div>
+
+              {/* Brand Info */}
+              <div style={{ flex: 1 }}>
+                <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "600" }}>
+                  {brand.brand}
+                  {userBrand.toLowerCase() === brand.brand.toLowerCase() && (
+                    <span style={{ marginLeft: "10px", fontSize: "12px", color: "#3b82f6", background: "#1e3a8a", padding: "2px 8px", borderRadius: "4px" }}>
+                      Your Brand
+                    </span>
+                  )}
+                </h3>
+              </div>
+
+              {/* Score */}
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: "28px", fontWeight: "bold", color: "#10b981" }}>{brand.fleet_health_score}</div>
+                <div style={{ color: "#888", fontSize: "12px" }}>Health Score</div>
+              </div>
+            </div>
+          ))}
+        </div>
       </section>
 
       {/* FLOATING ASSISTANT */}

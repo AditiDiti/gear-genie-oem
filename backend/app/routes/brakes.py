@@ -20,6 +20,7 @@ def brake_temp_performance(
     brand: str,
     user=Depends(get_current_user)
 ):
+    print(f"Brakes temp-perf - Brand: {brand}, User: {user}")
     _ensure_same_brand(brand, user["brand"])
 
     rows = load_csv(brand, "brake_temp_perf.csv")

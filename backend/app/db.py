@@ -1,13 +1,21 @@
 import os
 from sqlalchemy import create_engine, Column, String
 from sqlalchemy.orm import declarative_base, sessionmaker
+from pathlib import Path
 
 # ✅ Database URL (env-based, fallback to sqlite)
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./users.db")
+DATABASE_URL = os.getenv("DATABASE_URL", None)
+
+if not DATABASE_URL:
+    # For local development, use SQLite in the backend directory
+    db_path = Path(__file__).resolve().parent.parent / "users.db"
+    DATABASE_URL = f"sqlite:///{db_path}"
+
+print(f"📊 Database URL: {DATABASE_URL}")
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
 )
 
 SessionLocal = sessionmaker(
