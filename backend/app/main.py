@@ -10,11 +10,10 @@ from app.routes.battery import router as battery_router
 from app.routes.brakes import router as brakes_router
 from app.routes.mcp import router as mcp_router
 
-# DB + Models
-from app.database import SessionLocal
-from app.models import User
-from app.utils.security import hash_password  # adjust if path differs
-
+# DB + Auth utils (MATCHING YOUR FILES)
+from app.db import SessionLocal
+from app.auth import User
+from app.security import hash_password
 
 app = FastAPI(title="OEM Analytics API")
 
@@ -34,9 +33,9 @@ app.add_middleware(
 )
 
 # =========================
-# SEED DEFAULT DEMO USER
+# SEED DEMO USER (PROD FIX)
 # =========================
-def seed_default_user():
+def seed_demo_user():
     db = SessionLocal()
     try:
         user = db.query(User).filter(User.email == "user1@example.com").first()
@@ -52,23 +51,21 @@ def seed_default_user():
         else:
             print("ℹ️ Demo user already exists")
     except Exception as e:
-        print("❌ Error seeding demo user:", e)
+        print("❌ Seeding error:", e)
     finally:
         db.close()
 
-
-# Call seeding ON STARTUP
-seed_default_user()
+seed_demo_user()
 
 # =========================
 # HEALTH CHECK
 # =========================
 @app.get("/")
-def health_check():
-    return {"status": "OEM Analytics API is running"}
+def health():
+    return {"status": "API running"}
 
 # =========================
-# ROUTERS (AUTH FIRST)
+# ROUTERS
 # =========================
 app.include_router(auth_router)
 app.include_router(ranking_router)
