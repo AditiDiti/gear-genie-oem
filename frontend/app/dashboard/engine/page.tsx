@@ -17,6 +17,7 @@ import {
 /* ✅ COLORS */
 const COLORS = ["#22c55e", "#eab308", "#f97316", "#ef4444"]
 
+/* ✅ TYPES */
 type TempPerf = {
   temperature: string
   performance: number
@@ -54,68 +55,75 @@ export default function EnginePage() {
     Promise.all([
       /* ✅ TEMP vs PERFORMANCE */
       fetch(`http://127.0.0.1:8000/${brand}/engine/temp-performance`, { headers })
-        .then(r => r.json())
-        .then(data => {
-          console.log("Engine temp-perf:", data)
-          if (Array.isArray(data)) {
-            return data.map((i: any) => ({
-              temperature: i.temp_band || i.temperature || "",
-              performance: Number(i.avg_engine_performance_percent || i.performance || 0),
-            }))
-          }
-          return []
+        .then((r) => r.json())
+        .then((data) => {
+          if (!Array.isArray(data)) return []
+          return data.map((i: any): TempPerf => ({
+            temperature: String(i.temp_band ?? i.temperature ?? ""),
+            performance: Number(
+              i.avg_engine_performance_percent ?? i.performance ?? 0
+            ),
+          }))
         }),
 
       /* ✅ DISTRIBUTION */
       fetch(`http://127.0.0.1:8000/${brand}/engine/distribution`, { headers })
-        .then(r => r.json())
-        .then(data => {
-          console.log("Engine distribution:", data)
-          if (Array.isArray(data)) {
-            return data.map((i: any) => ({
-              label: Object.values(i)[0] || "Unknown",
-              value: parseInt(Object.values(i)[1]?.toString() || "0"),
-            }))
-          }
-          return []
+        .then((r) => r.json())
+        .then((data) => {
+          if (!Array.isArray(data)) return []
+          return data.map((i: any) => ({
+            label:
+              typeof i.label === "string"
+                ? i.label
+                : String(Object.values(i)[0] ?? "Unknown"),
+            value: Number(Object.values(i)[1] ?? 0),
+          }))
         }),
 
       /* ✅ RISK */
       fetch(`http://127.0.0.1:8000/${brand}/engine/risk`, { headers })
-        .then(r => r.json())
-        .then(data => {
-          console.log("Engine risk:", data)
+        .then((r) => r.json())
+        .then((data) => {
           if (Array.isArray(data) && data.length > 0) {
             const row = data[0]
             return {
-              risk: parseInt(row.engine_failure_imminent) === 1 ? "High Risk" : "Low Risk",
-              confidence: Math.round(parseFloat(row.fraction) * 100),
-            }
+              risk:
+                Number(row.engine_failure_imminent) === 1
+                  ? "High Risk"
+                  : "Low Risk",
+              confidence: Math.round(Number(row.fraction ?? 0) * 100),
+            } as RiskSummary
           }
-          return { risk: "Unknown", confidence: 0 }
+          return { risk: "Unknown", confidence: 0 } as RiskSummary
         }),
     ])
       .then(([t, d, r]) => {
         setTempPerf(t || [])
-        setDistribution(
-           (d || []).map((item: any) => ({
-            label: typeof item.label === "string"
-            ? item.label
-            : JSON.stringify(item.label ?? "Unknown"),
-            value: item.value,
-            }))
-        )
 
+        const safeDistribution: DistributionItem[] = Array.isArray(d)
+          ? d.map(
+              (item: any): DistributionItem => ({
+                label:
+                  typeof item.label === "string"
+                    ? item.label
+                    : String(item.label ?? "Unknown"),
+                value: Number(item.value ?? 0),
+              })
+            )
+          : []
+
+        setDistribution(safeDistribution)
         setRisk(r)
       })
       .catch((err) => {
         console.error("Failed to load engine data:", err)
-        setLoading(false)
       })
       .finally(() => setLoading(false))
   }, [router])
 
-  if (loading) return <p style={{ padding: 40 }}>Loading engine insights...</p>
+  if (loading) {
+    return <p style={{ padding: 40 }}>Loading engine insights...</p>
+  }
 
   return (
     <div
@@ -162,7 +170,7 @@ export default function EnginePage() {
                 outerRadius={95}
                 label
               >
-                {(distribution || []).map((_, i) => (
+                {distribution.map((_, i) => (
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
               </Pie>
@@ -172,7 +180,7 @@ export default function EnginePage() {
         </div>
       </div>
 
-      {/* ✅ RISK SUMMARY – SAME AS BRAKES */}
+      {/* ✅ RISK SUMMARY */}
       <div
         style={{
           ...cardStyle,
@@ -199,7 +207,6 @@ export default function EnginePage() {
               Confidence: <b>{risk.confidence}%</b>
             </p>
 
-            {/* ✅ PROGRESS BAR */}
             <div
               style={{
                 marginTop: 24,
