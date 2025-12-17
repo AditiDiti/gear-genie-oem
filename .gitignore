@@ -1,0 +1,20 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Node / Next
+node_modules/
+.next/
+out/
+
+# Env
+.env
+.env.local
+
+# Databases (ignore auth DB if sensitive)
+users.db
+*.sqlite3
+
+# System
+.DS_Store
