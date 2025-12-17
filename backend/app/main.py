@@ -10,11 +10,6 @@ from app.routes.battery import router as battery_router
 from app.routes.brakes import router as brakes_router
 from app.routes.mcp import router as mcp_router
 
-# DB + Auth utils (MATCHING YOUR FILES)
-from app.db import SessionLocal
-from app.models.user import User
-from app.utils import hash_password
-
 app = FastAPI(title="OEM Analytics API")
 
 # =========================
@@ -25,37 +20,11 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "https://gear-genie-oem.vercel.app",
-        "https://gear-genie-oem-*.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# =========================
-# SEED DEMO USER (PROD FIX)
-# =========================
-def seed_demo_user():
-    db = SessionLocal()
-    try:
-        user = db.query(User).filter(User.email == "user1@example.com").first()
-        if not user:
-            demo_user = User(
-                email="user1@example.com",
-                brand="audi",
-                hashed_password=hash_password("password123"),
-            )
-            db.add(demo_user)
-            db.commit()
-            print("✅ Demo user created")
-        else:
-            print("ℹ️ Demo user already exists")
-    except Exception as e:
-        print("❌ Seeding error:", e)
-    finally:
-        db.close()
-
-seed_demo_user()
 
 # =========================
 # HEALTH CHECK
