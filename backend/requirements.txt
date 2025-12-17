@@ -5,3 +5,5 @@ passlib[bcrypt]
 pydantic
 python-multipart
 sqlalchemy
+pandas
+numpy
