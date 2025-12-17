@@ -12,8 +12,8 @@ from app.routes.mcp import router as mcp_router
 
 # DB + Auth utils (MATCHING YOUR FILES)
 from app.db import SessionLocal
-from app.auth import User
-from app.security import hash_password
+from app.models.user import User
+from app.utils import hash_password
 
 app = FastAPI(title="OEM Analytics API")
 
