@@ -2,8 +2,26 @@ from pathlib import Path
 import pandas as pd
 from fastapi import HTTPException
 
-BASE_DIR = Path(__file__).resolve().parents[2]
-BASE_DATA_DIR = BASE_DIR / "data" / "processed"
+# Find the project root by looking for the 'data' folder
+def find_data_dir():
+    # Try multiple possible paths
+    possible_paths = [
+        Path(__file__).resolve().parents[2] / "data" / "processed",  # For local dev
+        Path(__file__).resolve().parents[3] / "data" / "processed",  # For Railway (if structure is different)
+        Path("/app/data/processed"),  # Direct Railway path
+        Path("/data/processed"),  # Alternative Railway path
+    ]
+    
+    for path in possible_paths:
+        if path.exists():
+            print(f"✅ Found data directory at: {path}")
+            return path
+    
+    print(f"⚠️  No data directory found. Checked paths: {[str(p) for p in possible_paths]}")
+    return possible_paths[0]  # Return the preferred path even if it doesn't exist
+
+BASE_DIR = find_data_dir()
+BASE_DATA_DIR = BASE_DIR
 
 
 def load_csv(brand: str, filename: str):
