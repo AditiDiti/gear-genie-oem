@@ -13,6 +13,13 @@ def brand_ranking(user = Depends(get_current_user)):
     """
     results = []
 
+    # Check if data directory exists
+    if not BASE_DATA_DIR.exists():
+        return {
+            "total_brands": 0,
+            "ranking": []
+        }
+
     for brand_dir in BASE_DATA_DIR.iterdir():
         if not brand_dir.is_dir():
             continue

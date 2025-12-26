@@ -26,6 +26,14 @@ def brand_summary(
     _ensure_same_brand(brand, user["brand"])
 
     path = BASE_DATA_DIR / brand
+    
+    # Check if data directory exists
+    if not path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Data not available for brand '{brand}'"
+        )
+    
     df = pd.read_csv(path / "master_vehicle_data.csv")
 
     engine_risk = df["engine_failure_imminent"].mean()
