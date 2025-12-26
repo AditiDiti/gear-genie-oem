@@ -2,7 +2,7 @@ from pathlib import Path
 import pandas as pd
 from fastapi import HTTPException
 
-BASE_DIR = Path(__file__).resolve().parents[3]
+BASE_DIR = Path(__file__).resolve().parents[2]
 BASE_DATA_DIR = BASE_DIR / "data" / "processed"
 
 
