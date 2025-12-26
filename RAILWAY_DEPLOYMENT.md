@@ -1,102 +1,98 @@
-# Railway Deployment Guide
+# Railway Deployment Guide (SQLite MVP)
 
 ## Prerequisites
 
-- Railway account and project created
-- Backend and frontend repositories connected
+- Railway account created
+- Backend repository connected to Railway
+- Frontend already deployed on Vercel
 
-## Backend Deployment Steps
+## Backend Deployment Steps (SQLite)
 
-### Step 1: Set Up PostgreSQL Database on Railway
+### Step 1: Configure Environment Variables on Railway
 
-1. Go to Railway Dashboard
-2. Click "Create New" → Select "PostgreSQL"
-3. Wait for PostgreSQL instance to initialize
-4. Go to PostgreSQL service "Connect" tab → copy the Database URL
-
-### Step 2: Configure Environment Variables
-
-In Railway Backend Project Settings → Variables:
+In Railway Backend Project Settings → **Variables**, add:
 
 ```
-DATABASE_URL=<paste PostgreSQL URL from step 1>
-SECRET_KEY=<run: python -c "import secrets; print(secrets.token_urlsafe(32))" and paste result>
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=60
+SECRET_KEY=<Generate with: python -c "import secrets; print(secrets.token_urlsafe(32))">
+CORS_ORIGINS=http://localhost:3000,https://your-vercel-frontend-url.vercel.app
 ```
 
-### Step 3: Connect Backend to PostgreSQL
+**⚠️ Important:** Do NOT set `DATABASE_URL` — SQLite will be used automatically. Your `db.py` defaults to SQLite when `DATABASE_URL` is not set.
 
-1. Add environment variable:
-   ```
-   DATABASE_URL=postgresql://user:password@host:port/dbname
-   ```
-2. Railway automatically detects and uses this for the connection
+### Step 2: Deploy to Railway
 
-### Step 4: Configure CORS
+1. Go to **Railway Dashboard** → Create new project
+2. Select **GitHub** → Connect your repository
+3. Railway auto-detects `Procfile` and deploys automatically
+4. Wait for deployment to complete
+5. Monitor logs in Railway dashboard
 
-If your frontend URL is different from the defaults, add:
+### Step 3: Get Your Backend URL
 
-```
-CORS_ORIGINS=http://localhost:3000,https://your-frontend-url.vercel.app
-```
+1. Go to Backend Service → **Settings**
+2. Click **Generate Domain** to get your public backend URL
+3. Copy the domain (e.g., `https://your-backend.up.railway.app`)
 
-### Step 5: Deploy
+### Step 4: Update Frontend Environment Variable
 
-- Push to main branch (or your connected branch)
-- Railway automatically deploys
-- Monitor logs in Railway Dashboard
+Your frontend on Vercel needs the backend URL:
 
-## Frontend Deployment Steps
-
-### Step 1: Set Environment Variable
-
-In Railway Frontend Project Settings → Variables:
+In Vercel Project → Settings → Environment Variables:
 
 ```
-NEXT_PUBLIC_API_BASE_URL=https://your-backend-railway-url.up.railway.app
+NEXT_PUBLIC_API_BASE_URL=https://your-backend.up.railway.app
 ```
 
-Get the backend URL from: Backend Service → Settings → Generate Domain
+Redeploy frontend to apply the change.
 
-### Step 2: Deploy
-
-- Push to main branch
-- Railway automatically builds and deploys Next.js
-
-## Verification
+## Verification Steps
 
 1. **Check Backend Logs:**
 
    ```
    ✅ Database tables created successfully
-   ✅ Database already initialized with X users
+   ✅ Users created or already initialized
    ```
 
 2. **Test Login:**
 
-   - Go to frontend URL
-   - Login with: `ford_admin@oem.com` / `admin123`
-   - Should see dashboard with data
+   - Go to your Vercel frontend URL
+   - Login with default credentials (created in `create_user.py`):
+     - Email: `ford_admin@oem.com`
+     - Password: `admin123`
+     - Brand: `ford`
+   - Dashboard should load with data
 
-3. **Check API Health:**
-   ```bash
-   curl https://your-backend-url.up.railway.app/docs
+3. **Check API Docs:**
    ```
+   https://your-backend.up.railway.app/docs
+   ```
+   Should show FastAPI Swagger documentation
+
+## Important Notes on SQLite + Railway
+
+- **Ephemeral Storage:** Railway uses ephemeral filesystems. If the Railway dyno restarts, your SQLite data (user database) may be lost.
+- **For Production:** Consider migrating to PostgreSQL when moving beyond MVP.
+- **Current Setup:** Perfect for MVP/testing since user data is recreated on startup via `init_db()`.
 
 ## Troubleshooting
 
-### "Invalid or expired token" errors
+### "Invalid or expired token" error
 
-- Check `NEXT_PUBLIC_API_BASE_URL` is set correctly on frontend
-- Verify `SECRET_KEY` is the same on backend
-- Check browser console for actual API URL being called
+- Verify `NEXT_PUBLIC_API_BASE_URL` is correct on frontend (without trailing slash)
+- Check `SECRET_KEY` matches between backend and token generation
+- Check browser console for actual API calls being made
 
-### Database connection errors
+### "Brand mismatch – access denied" error
 
-- Verify `DATABASE_URL` is correct PostgreSQL URL
-- Check Railway PostgreSQL service is running
-- Ensure firewall allows Railway connections
+- Ensure login brand matches your data folder (e.g., `ford`, `bmw`, `audi`)
+- Check `data/processed/` has the brand folder
+
+### Data not appearing
+
+- Verify CSV files exist in `data/processed/{brand}/` folder
+- Check Railway logs for CSV loading errors
+- Ensure `BASE_DATA_DIR` path is correctly resolved
 
 ### CORS errors
 
