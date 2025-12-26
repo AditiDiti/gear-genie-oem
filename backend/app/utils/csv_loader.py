@@ -2,10 +2,9 @@ from pathlib import Path
 import pandas as pd
 from fastapi import HTTPException
 
-# The backend folder is where main.py runs from
-# Data is at ../../data/processed (root level)
-BASE_DIR = Path(__file__).resolve().parents[2]  # Goto backend folder
-BASE_DATA_DIR = BASE_DIR.parent / "data" / "processed"  # Go up to root, then to data
+# Path calculation from backend/app/utils/csv_loader.py:
+# parents[3] = project root, then data/processed
+BASE_DATA_DIR = Path(__file__).resolve().parents[3] / "data" / "processed"
 
 
 def load_csv(brand: str, filename: str):
